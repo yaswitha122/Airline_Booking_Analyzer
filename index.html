@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airline Booking Analyzer</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin: 20px;
+            padding: 30px;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 25px;
+        }
+        .metric-card {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border-radius: 15px;
+            margin: 10px 0;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: rgba(44, 62, 80, 0.95);">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-plane-departure me-2"></i>
+                Airline Booking Analyzer
+            </a>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="main-container">
+            <h1 class="text-center mb-4">
+                <i class="fas fa-chart-line text-primary me-2"></i>
+                Airline Booking Market Demand Analyzer
+            </h1>
+
+            <!-- Advanced Tools Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-tools me-2"></i>
+                    Advanced Tools
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Flight Status Lookup</label>
+                            <input type="text" class="form-control mb-2" id="flightStatusNumber" placeholder="Flight Number (e.g. QF400)">
+                            <input type="date" class="form-control mb-2" id="flightStatusDate">
+                            <button class="btn btn-primary w-100" onclick="lookupFlightStatus()">Lookup</button>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Airport Info Lookup</label>
+                            <input type="text" class="form-control mb-2" id="airportIata" placeholder="IATA Code (e.g. SYD)">
+                            <button class="btn btn-primary w-100" onclick="lookupAirportInfo()">Lookup</button>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Airline Info Lookup</label>
+                            <input type="text" class="form-control mb-2" id="airlineIata" placeholder="IATA Code (e.g. QF)">
+                            <button class="btn btn-primary w-100" onclick="lookupAirlineInfo()">Lookup</button>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Historical Flights</label>
+                            <input type="text" class="form-control mb-2" id="histDepIata" placeholder="Dep IATA (e.g. SYD)">
+                            <input type="text" class="form-control mb-2" id="histArrIata" placeholder="Arr IATA (e.g. MEL)">
+                            <input type="date" class="form-control mb-2" id="histFlightDate">
+                            <button class="btn btn-primary w-100" onclick="lookupHistoricalFlights()">Lookup</button>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div id="advancedResults"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-cogs me-2"></i>
+                    Analysis Configuration
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="dataSource" class="form-label">Data Source</label>
+                            <select class="form-select" id="dataSource">
+                                <option value="mock_data">Mock Data (Demo)</option>
+                                <option value="skyscanner">Skyscanner</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="daysAhead" class="form-label">Days Ahead</label>
+                            <input type="number" class="form-control" id="daysAhead" value="30" min="7" max="90">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="routeSelect" class="form-label">Routes</label>
+                            <select class="form-select" id="routeSelect" multiple>
+                                <option value="SYD-MEL" selected>Sydney to Melbourne</option>
+                                <option value="SYD-BNE" selected>Sydney to Brisbane</option>
+                                <option value="MEL-BNE" selected>Melbourne to Brisbane</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3 d-flex align-items-end">
+                            <button class="btn btn-primary w-100" onclick="fetchData()">
+                                <i class="fas fa-search me-2"></i>
+                                Analyze
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loadingIndicator" style="display: none; text-align: center; padding: 20px;">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Fetching and analyzing data...</p>
+            </div>
+
+            <!-- Results -->
+            <div id="resultsSection" style="display: none;">
+                <!-- Summary Metrics -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Market Summary
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="summaryMetrics"></div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Price Trends
+                    </div>
+                    <div class="card-body">
+                        <div id="priceTrendsChart" class="chart-container"></div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-fire me-2"></i>
+                                Demand Heatmap
+                            </div>
+                            <div class="card-body">
+                                <div id="demandHeatmapChart" class="chart-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-balance-scale me-2"></i>
+                                Route Comparison
+                            </div>
+                            <div class="card-body">
+                                <div id="routeComparisonChart" class="chart-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-clock me-2"></i>
+                                Delay Heatmap
+                            </div>
+                            <div class="card-body">
+                                <div id="delayHeatmapChart" class="chart-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-star me-2"></i>
+                                Route Popularity
+                            </div>
+                            <div class="card-body">
+                                <div id="routePopularityChart" class="chart-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Insights -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        AI Insights
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Trends</h5>
+                                <div id="trendsInsights"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Recommendations</h5>
+                                <div id="recommendationsInsights"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentData = null;
+
+        async function fetchData() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const resultsSection = document.getElementById('resultsSection');
+            
+            loadingIndicator.style.display = 'block';
+            resultsSection.style.display = 'none';
+            
+            try {
+                const dataSource = document.getElementById('dataSource').value;
+                const daysAhead = parseInt(document.getElementById('daysAhead').value);
+                const routeSelect = document.getElementById('routeSelect');
+                const selectedRoutes = Array.from(routeSelect.selectedOptions).map(option => option.value);
+                
+                if (selectedRoutes.length === 0) {
+                    alert('Please select at least one route');
+                    return;
+                }
+                
+                const response = await fetch('/api/fetch-data', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        source: dataSource,
+                        routes: selectedRoutes,
+                        days_ahead: daysAhead
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentData = result.data;
+                    displayResults(currentData);
+                    await generateCharts(currentData);
+                    await getAIInsights(currentData);
+                } else {
+                    throw new Error(result.error || 'Failed to fetch data');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error fetching data: ' + error.message);
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.style.display = 'block';
+            displaySummaryMetrics(data.summary);
+        }
+
+        function displaySummaryMetrics(summary) {
+            const summaryMetrics = document.getElementById('summaryMetrics');
+            
+            const metrics = [
+                {label: 'Total Routes', value: summary.total_routes || 0, icon: 'fas fa-route'},
+                {label: 'Avg Price', value: `$${summary.overall_avg_price?.toFixed(0) || 0}`, icon: 'fas fa-dollar-sign'},
+                {label: 'Price Range', value: `$${summary.overall_price_range?.min?.toFixed(0) || 0} - $${summary.overall_price_range?.max?.toFixed(0) || 0}`, icon: 'fas fa-chart-area'},
+                {label: 'High Demand Routes', value: summary.high_demand_routes?.length || 0, icon: 'fas fa-fire'}
+            ];
+            
+            summaryMetrics.innerHTML = metrics.map(metric => `
+                <div class="col-md-3 col-sm-6">
+                    <div class="metric-card">
+                        <div style="font-size: 2rem; font-weight: bold;">
+                            <i class="${metric.icon} me-2"></i>${metric.value}
+                        </div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">${metric.label}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function generateCharts(data) {
+            try {
+                const response = await fetch('/api/charts', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({type: 'all', data: data})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const charts = result.charts;
+                    
+                    if (charts.price_trends) {
+                        Plotly.newPlot('priceTrendsChart', JSON.parse(charts.price_trends));
+                    }
+                    if (charts.demand_heatmap) {
+                        Plotly.newPlot('demandHeatmapChart', JSON.parse(charts.demand_heatmap));
+                    }
+                    if (charts.route_comparison) {
+                        Plotly.newPlot('routeComparisonChart', JSON.parse(charts.route_comparison));
+                    }
+                }
+            } catch (error) {
+                console.error('Error generating charts:', error);
+            }
+        }
+
+        async function getAIInsights(data) {
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({type: 'trends', data: data})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayInsights(result.insights);
+                }
+            } catch (error) {
+                console.error('Error getting AI insights:', error);
+            }
+        }
+
+        function displayInsights(insights) {
+            const trendsInsights = document.getElementById('trendsInsights');
+            const recommendationsInsights = document.getElementById('recommendationsInsights');
+            
+            if (insights.trends && insights.trends.length > 0) {
+                trendsInsights.innerHTML = insights.trends.map(trend => 
+                    `<div style="background: #f8f9fa; border-left: 4px solid #3498db; padding: 15px; margin: 10px 0; border-radius: 10px;">${trend}</div>`
+                ).join('');
+            } else {
+                trendsInsights.innerHTML = '<p class="text-muted">No trend data available</p>';
+            }
+            
+            if (insights.recommendations && insights.recommendations.length > 0) {
+                recommendationsInsights.innerHTML = insights.recommendations.map(rec => 
+                    `<div style="background: #f8f9fa; border-left: 4px solid #27ae60; padding: 15px; margin: 10px 0; border-radius: 10px;">${rec}</div>`
+                ).join('');
+            } else {
+                recommendationsInsights.innerHTML = '<p class="text-muted">No recommendations available</p>';
+            }
+        }
+
+        async function lookupFlightStatus() {
+            const num = document.getElementById('flightStatusNumber').value.trim();
+            const date = document.getElementById('flightStatusDate').value;
+            const resDiv = document.getElementById('advancedResults');
+            resDiv.innerHTML = '<div class="text-info">Loading flight status...</div>';
+            try {
+                const resp = await fetch('/api/flight-status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({flight_number: num, flight_date: date})
+                });
+                const result = await resp.json();
+                if (result.success && result.status.length > 0) {
+                    const flight = result.status[0];
+                    resDiv.innerHTML = `<div class='alert alert-success'><b>Flight:</b> ${flight.flight.iata || ''} <b>Status:</b> ${flight.flight_status || 'N/A'}<br><b>Departure:</b> ${flight.departure?.airport || ''} (${flight.departure?.iata || ''})<br><b>Arrival:</b> ${flight.arrival?.airport || ''} (${flight.arrival?.iata || ''})<br><b>Scheduled:</b> ${flight.departure?.scheduled || ''}</div>`;
+                } else {
+                    resDiv.innerHTML = '<div class="alert alert-warning">No flight status found.</div>';
+                }
+            } catch (e) {
+                resDiv.innerHTML = `<div class='alert alert-danger'>Error: ${e.message}</div>`;
+            }
+        }
+        async function lookupAirportInfo() {
+            const iata = document.getElementById('airportIata').value.trim();
+            const resDiv = document.getElementById('advancedResults');
+            resDiv.innerHTML = '<div class="text-info">Loading airport info...</div>';
+            try {
+                const resp = await fetch('/api/airport-info', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({iata_code: iata})
+                });
+                const result = await resp.json();
+                if (result.success && result.airport_info.length > 0) {
+                    const a = result.airport_info[0];
+                    resDiv.innerHTML = `<div class='alert alert-success'><b>${a.airport_name}</b> (${a.iata_code})<br><b>City:</b> ${a.city_name}<br><b>Country:</b> ${a.country_name}<br><b>Timezone:</b> ${a.timezone}<br><b>Latitude:</b> ${a.latitude}, <b>Longitude:</b> ${a.longitude}</div>`;
+                } else {
+                    resDiv.innerHTML = '<div class="alert alert-warning">No airport info found.</div>';
+                }
+            } catch (e) {
+                resDiv.innerHTML = `<div class='alert alert-danger'>Error: ${e.message}</div>`;
+            }
+        }
+        async function lookupAirlineInfo() {
+            const iata = document.getElementById('airlineIata').value.trim();
+            const resDiv = document.getElementById('advancedResults');
+            resDiv.innerHTML = '<div class="text-info">Loading airline info...</div>';
+            try {
+                const resp = await fetch('/api/airline-info', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({iata_code: iata})
+                });
+                const result = await resp.json();
+                if (result.success && result.airline_info.length > 0) {
+                    const a = result.airline_info[0];
+                    resDiv.innerHTML = `<div class='alert alert-success'><b>${a.airline_name}</b> (${a.iata_code})<br><b>Country:</b> ${a.country_name}<br><b>ICAO:</b> ${a.icao_code}<br><b>Callsign:</b> ${a.callsign || 'N/A'}</div>`;
+                } else {
+                    resDiv.innerHTML = '<div class="alert alert-warning">No airline info found.</div>';
+                }
+            } catch (e) {
+                resDiv.innerHTML = `<div class='alert alert-danger'>Error: ${e.message}</div>`;
+            }
+        }
+        async function lookupHistoricalFlights() {
+            const dep = document.getElementById('histDepIata').value.trim();
+            const arr = document.getElementById('histArrIata').value.trim();
+            const date = document.getElementById('histFlightDate').value;
+            const resDiv = document.getElementById('advancedResults');
+            resDiv.innerHTML = '<div class="text-info">Loading historical flights...</div>';
+            try {
+                const resp = await fetch('/api/historical-flights', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({dep_iata: dep, arr_iata: arr, flight_date: date})
+                });
+                const result = await resp.json();
+                if (result.success && result.flights.length > 0) {
+                    let html = `<div class='alert alert-success'><b>Historical Flights (${dep} → ${arr} on ${date}):</b><ul>`;
+                    for (const f of result.flights.slice(0, 5)) {
+                        html += `<li><b>${f.flight?.iata || ''}</b> | Status: ${f.flight_status || 'N/A'} | Dep: ${f.departure?.scheduled || ''} | Arr: ${f.arrival?.scheduled || ''}</li>`;
+                    }
+                    html += '</ul></div>';
+                    resDiv.innerHTML = html;
+                    // Optionally, visualize delays
+                    renderDelayHeatmap(result.flights);
+                    renderRoutePopularity(result.flights);
+                } else {
+                    resDiv.innerHTML = '<div class="alert alert-warning">No historical flights found.</div>';
+                }
+            } catch (e) {
+                resDiv.innerHTML = `<div class='alert alert-danger'>Error: ${e.message}</div>`;
+            }
+        }
+        function renderDelayHeatmap(flights) {
+            // Build delay data by hour
+            const delays = {};
+            for (const f of flights) {
+                const dep = f.departure?.scheduled;
+                const arr = f.arrival?.scheduled;
+                const actualArr = f.arrival?.actual;
+                if (arr && actualArr) {
+                    const sched = new Date(arr);
+                    const actual = new Date(actualArr);
+                    const hour = sched.getHours();
+                    const delay = (actual - sched) / 60000; // minutes
+                    if (!delays[hour]) delays[hour] = [];
+                    delays[hour].push(delay);
+                }
+            }
+            const hours = Object.keys(delays).sort((a,b)=>a-b);
+            const avgDelays = hours.map(h => delays[h].reduce((a,b)=>a+b,0)/delays[h].length);
+            const data = [{
+                x: hours,
+                y: avgDelays,
+                type: 'heatmap',
+                colorscale: 'Reds',
+                colorbar: {title: 'Avg Delay (min)'}
+            }];
+            Plotly.newPlot('delayHeatmapChart', data, {title: 'Delay Heatmap by Hour', xaxis: {title: 'Hour'}, yaxis: {title: 'Avg Delay (min)'}});
+        }
+        function renderRoutePopularity(flights) {
+            // Count flights per airline
+            const counts = {};
+            for (const f of flights) {
+                const airline = f.airline?.name || 'Unknown';
+                counts[airline] = (counts[airline] || 0) + 1;
+            }
+            const airlines = Object.keys(counts);
+            const values = airlines.map(a => counts[a]);
+            const data = [{
+                x: airlines,
+                y: values,
+                type: 'bar',
+                marker: {color: 'teal'}
+            }];
+            Plotly.newPlot('routePopularityChart', data, {title: 'Route Popularity by Airline', xaxis: {title: 'Airline'}, yaxis: {title: 'Flights'}});
+        }
+    </script>
+</body>
+</html>
